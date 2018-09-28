@@ -72,7 +72,7 @@ EOF
 data "template_file" "userdata" {
   count = "${var.worker_group_count}"
 
-  template = "${lookup(var.worker_groups[count.index], "var.use_default_userdata")
+  template = "${lookup(var.worker_groups[count.index], "use_default_userdata")
     ? file("${path.module}/templates/userdata.sh.tpl")
     : file("${path.module}/templates/empty-userdata.sh.tpl")}"
 
