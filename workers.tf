@@ -1,4 +1,34 @@
+data "external" "parse_node_labels" {
+  program = ["python", "${path.module}/scripts/parse_node_tags.py", "node_labels", "${jsonencode(var.worker_groups)}"]
+}
+
+data "external" "parse_node_taints" {
+  program = ["python", "${path.module}/scripts/parse_node_tags.py", "node_taints", "${jsonencode(var.worker_groups)}"]
+}
+
+resource "null_resource" "all_node_labels" {
+  count = "${data.external.parse_node_labels.result["total_tags"]}"
+
+  triggers = {
+    key                 = "k8s.io/cluster-autoscaler/node-template/label/${element(split(",", lookup(data.external.parse_node_labels.result, "keys")), count.index)}"
+    value               = "${element(split(",", lookup(data.external.parse_node_labels.result, "values")), count.index)}"
+    propagate_at_launch = "true"
+  }
+}
+
+resource "null_resource" "all_node_taints" {
+  count = "${data.external.parse_node_taints.result["total_tags"]}"
+
+  triggers = {
+    key                 = "k8s.io/cluster-autoscaler/node-template/taint/${element(split(",", lookup(data.external.parse_node_taints.result, "keys")), count.index)}"
+    value               = "${element(split(",", lookup(data.external.parse_node_taints.result, "values")), count.index)}"
+    propagate_at_launch = "true"
+  }
+}
+
 resource "aws_autoscaling_group" "workers" {
+  count                 = "${var.worker_group_count}"
+
   name_prefix           = "${aws_eks_cluster.this.name}-${lookup(var.worker_groups[count.index], "name", count.index)}"
   desired_capacity      = "${lookup(var.worker_groups[count.index], "asg_desired_capacity", local.workers_group_defaults["asg_desired_capacity"])}"
   max_size              = "${lookup(var.worker_groups[count.index], "asg_max_size", local.workers_group_defaults["asg_max_size"])}"
@@ -8,7 +38,6 @@ resource "aws_autoscaling_group" "workers" {
   vpc_zone_identifier   = ["${split(",", coalesce(lookup(var.worker_groups[count.index], "subnets", ""), local.workers_group_defaults["subnets"]))}"]
   protect_from_scale_in = "${lookup(var.worker_groups[count.index], "protect_from_scale_in", local.workers_group_defaults["protect_from_scale_in"])}"
   suspended_processes   = ["${compact(split(",", coalesce(lookup(var.worker_groups[count.index], "suspended_processes", ""), local.workers_group_defaults["suspended_processes"])))}"]
-  count                 = "${var.worker_group_count}"
 
   tags = ["${concat(
     list(
@@ -16,8 +45,18 @@ resource "aws_autoscaling_group" "workers" {
       map("key", "kubernetes.io/cluster/${aws_eks_cluster.this.name}", "value", "owned", "propagate_at_launch", true),
       map("key", "k8s.io/cluster-autoscaler/${lookup(var.worker_groups[count.index], "autoscaling_enabled", local.workers_group_defaults["autoscaling_enabled"]) == 1 ? "enabled" : "disabled"  }", "value", "true", "propagate_at_launch", false)
     ),
-    local.asg_tags)
-  }"]
+    local.asg_tags,
+    slice(
+      null_resource.all_node_labels.*.triggers,
+      element(split(",", data.external.parse_node_labels.result["start_idxs"]), count.index),
+      element(split(",", data.external.parse_node_labels.result["end_idxs"]), count.index)
+    ),
+    slice(
+      null_resource.all_node_taints.*.triggers,
+      element(split(",", data.external.parse_node_taints.result["start_idxs"]), count.index),
+      element(split(",", data.external.parse_node_taints.result["end_idxs"]), count.index)
+    )
+  )}"]
 
   lifecycle {
     ignore_changes = ["desired_capacity"]
