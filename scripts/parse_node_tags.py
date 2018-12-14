@@ -2,14 +2,14 @@
 Example input:
 [
   {
-    "ami_id": "ami-00c34f3e3aea7439d",
+    "ami_id": "ami-xxxxxxxxxxxxxxxxx",
     "asg_min_size": "1",
     "autoscaling_enabled": "0",
     "instance_type": "t2.medium",
-    "key_name": "crowdai-master",
+    "key_name": "foo",
     "name": "t2.medium",
-    "node_labels": "crowdai.com/prometheus-only=true",
-    "node_taints": "crowdai.com/prometheus-only=true:NoSchedule",
+    "node_labels": "crowdai.com/dedicated=prometheus",
+    "node_taints": "crowdai.com/dedicated=prometheusNoSchedule",
     "spot_price": ""
   }
 ]
@@ -26,7 +26,7 @@ for wg in worker_groups:
   if not wg_labels:
     node_labels.append([])
     continue
-  node_labels.append(wg[tag_key].split(','))
+  node_labels.append(wg_labels.split(','))
 
 output = {
     'keys': [],
