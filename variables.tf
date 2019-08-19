@@ -35,13 +35,13 @@ variable "map_accounts" {
 
 variable "map_roles" {
   description = "Additional IAM roles to add to the aws-auth configmap. See examples/eks_test_fixture/variables.tf for example format."
-  type        = list(string)
+  type        = list(map(string))
   default     = []
 }
 
 variable "map_users" {
   description = "Additional IAM users to add to the aws-auth configmap. See examples/eks_test_fixture/variables.tf for example format."
-  type        = list(string)
+  type        = list(map(string))
   default     = []
 }
 
