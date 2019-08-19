@@ -29,30 +29,30 @@ variable "manage_aws_auth" {
 
 variable "map_accounts" {
   description = "Additional AWS account numbers to add to the aws-auth configmap. See examples/eks_test_fixture/variables.tf for example format."
-  type        = list(string)
+  type        = "list"
   default     = []
 }
 
 variable "map_roles" {
   description = "Additional IAM roles to add to the aws-auth configmap. See examples/eks_test_fixture/variables.tf for example format."
-  type        = list(string)
+  type        = "list"
   default     = []
 }
 
 variable "map_users" {
   description = "Additional IAM users to add to the aws-auth configmap. See examples/eks_test_fixture/variables.tf for example format."
-  type        = list(string)
+  type        = "list"
   default     = []
 }
 
 variable "subnets" {
   description = "A list of subnets to place the EKS cluster and workers within."
-  type        = list(string)
+  type        = "list"
 }
 
 variable "tags" {
   description = "A map of tags to add to all resources."
-  type        = map(string)
+  type        = "map"
   default     = {}
 }
 
@@ -62,24 +62,22 @@ variable "vpc_id" {
 
 variable "worker_groups" {
   description = "A list of maps defining worker group configurations. See workers_group_defaults for valid keys."
-  type        = list(string)
+  type        = "list"
 
-  default = [
-    {
-      "name" = "default"
-    },
-  ]
+  default = [{
+    "name" = "default"
+  }]
 }
 
 variable "worker_group_count" {
   description = "The number of maps contained within the worker_groups list."
-  type        = string
+  type        = "string"
   default     = "1"
 }
 
 variable "workers_group_defaults" {
   description = "Override default values for target groups. See workers_group_defaults_defaults in locals.tf for valid keys."
-  type        = map(string)
+  type        = "map"
   default     = {}
 }
 
@@ -90,7 +88,7 @@ variable "worker_security_group_id" {
 
 variable "worker_additional_security_group_ids" {
   description = "A list of additional security group ids to attach to worker instances"
-  type        = list(string)
+  type        = "list"
   default     = []
 }
 
@@ -106,19 +104,19 @@ variable "kubeconfig_aws_authenticator_command" {
 
 variable "kubeconfig_aws_authenticator_command_args" {
   description = "Default arguments passed to the authenticator command. Defaults to [token -i $cluster_name]."
-  type        = list(string)
+  type        = "list"
   default     = []
 }
 
 variable "kubeconfig_aws_authenticator_additional_args" {
   description = "Any additional arguments to pass to the authenticator such as the role to assume. e.g. [\"-r\", \"MyEksRole\"]."
-  type        = list(string)
+  type        = "list"
   default     = []
 }
 
 variable "kubeconfig_aws_authenticator_env_variables" {
   description = "Environment variables that should be used when executing the authenticator. e.g. { AWS_PROFILE = \"eks\"}."
-  type        = map(string)
+  type        = "map"
   default     = {}
 }
 
@@ -136,4 +134,3 @@ variable "cluster_delete_timeout" {
   description = "Timeout value when deleting the EKS cluster."
   default     = "15m"
 }
-
