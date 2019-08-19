@@ -43,7 +43,7 @@ data "aws_iam_policy_document" "cluster_assume_role_policy" {
 data "template_file" "kubeconfig" {
   template = "${file("${path.module}/templates/kubeconfig.tpl")}"
 
-  vars {
+  vars = {
     cluster_name                      = "${aws_eks_cluster.this.name}"
     kubeconfig_name                   = "${local.kubeconfig_name}"
     endpoint                          = "${aws_eks_cluster.this.endpoint}"
@@ -63,7 +63,7 @@ EOF
 
   count = "${length(var.kubeconfig_aws_authenticator_env_variables)}"
 
-  vars {
+  vars = {
     value = "${element(values(var.kubeconfig_aws_authenticator_env_variables), count.index)}"
     key   = "${element(keys(var.kubeconfig_aws_authenticator_env_variables), count.index)}"
   }
@@ -76,7 +76,7 @@ data "template_file" "userdata" {
     ? file("${path.module}/templates/userdata.sh.tpl")
     : file("${path.module}/templates/empty-userdata.sh.tpl")}"
 
-  vars {
+  vars = {
     cluster_name        = "${aws_eks_cluster.this.name}"
     endpoint            = "${aws_eks_cluster.this.endpoint}"
     cluster_auth_base64 = "${aws_eks_cluster.this.certificate_authority.0.data}"
