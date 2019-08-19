@@ -139,7 +139,8 @@ resource "aws_launch_configuration" "workers" {
     "public_ip",
     local.workers_group_defaults["public_ip"],
   )
-  security_groups = [local.worker_security_group_id, var.worker_additional_security_group_ids, compact(
+  security_groups = [local.worker_security_group_id, compact(
+    var.worker_additional_security_group_ids,
     split(
       ",",
       lookup(
