@@ -99,10 +99,6 @@
 * MIT Licensed. See [LICENSE](https://github.com/terraform-aws-modules/terraform-aws-eks/tree/master/LICENSE) for full details.
 */
 
-provider "aws" {
-  version = "~> 2.24.0"
-}
-
 provider "external" {
   version = "~> 1.2"
 }
