@@ -74,7 +74,7 @@ data "template_file" "map_accounts" {
   )
 
   vars = {
-    account_number = var.map_accounts[count.index]
+    account_number = element(var.map_accounts, count.index)
   }
 }
 

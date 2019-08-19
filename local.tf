@@ -12,7 +12,7 @@ locals {
     join("", aws_security_group.workers.*.id),
     var.worker_security_group_id,
   )
-  default_iam_role_id = concat(aws_iam_role.workers.*.id, [""])[0]
+  default_iam_role_id = element(concat(aws_iam_role.workers.*.id, [""]), 0)
   kubeconfig_name     = var.kubeconfig_name == "" ? "eks_${var.cluster_name}" : var.kubeconfig_name
 
   workers_group_defaults_defaults = {
