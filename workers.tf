@@ -14,10 +14,7 @@ resource "null_resource" "all_node_labels" {
       split(",", data.external.parse_node_labels.result["keys"]),
       count.index,
     )}"
-    value = element(
-      split(",", data.external.parse_node_labels.result["values"]),
-      count.index,
-    )
+    value = split(",", data.external.parse_node_labels.result["values"])[count.index]
     propagate_at_launch = "true"
   }
 }
@@ -30,10 +27,7 @@ resource "null_resource" "all_node_taints" {
       split(",", data.external.parse_node_taints.result["keys"]),
       count.index,
     )}"
-    value = element(
-      split(",", data.external.parse_node_taints.result["values"]),
-      count.index,
-    )
+    value = split(",", data.external.parse_node_taints.result["values"])[count.index]
     propagate_at_launch = "true"
   }
 }
@@ -66,7 +60,7 @@ resource "aws_autoscaling_group" "workers" {
       ),
     ),
   )
-  launch_configuration = element(aws_launch_configuration.workers.*.id, count.index)
+  launch_configuration = aws_launch_configuration.workers.*.id[count.index]
   vpc_zone_identifier = split(
     ",",
     coalesce(
@@ -89,71 +83,49 @@ resource "aws_autoscaling_group" "workers" {
     ),
   )
 
-  # TF-UPGRADE-TODO: In Terraform v0.10 and earlier, it was sometimes necessary to
-  # force an interpolation expression to be interpreted as a list by wrapping it
-  # in an extra set of list brackets. That form was supported for compatibilty in
-  # v0.11, but is no longer supported in Terraform v0.12.
-  #
-  # If the expression in the following list itself returns a list, remove the
-  # brackets to avoid interpretation as a list of lists. If the expression
-  # returns a single list item then leave it as-is and remove this TODO comment.
-  tags = [
-    concat(
+  tags = concat(
       [
         {
-          "key"                 = "Name"
-          "value"               = "${aws_eks_cluster.this.name}-${lookup(var.worker_groups[count.index], "name", count.index)}-eks_asg"
-          "propagate_at_launch" = true
+          key = "Name"
+          value = "${aws_eks_cluster.this.name}-${lookup(var.worker_groups[count.index], "name", count.index)}-eks_asg"
+          propagate_at_launch = true
         },
         {
-          "key"                 = "kubernetes.io/cluster/${aws_eks_cluster.this.name}"
-          "value"               = "owned"
-          "propagate_at_launch" = true
+          key = "kubernetes.io/cluster/${aws_eks_cluster.this.name}"
+          value = "owned"
+          propagate_at_launch = true
         },
         {
-          "key" = "k8s.io/cluster-autoscaler/${lookup(
+          key = "k8s.io/cluster-autoscaler/${lookup(
             var.worker_groups[count.index],
             "autoscaling_enabled",
             local.workers_group_defaults["autoscaling_enabled"],
           ) == 1 ? "enabled" : "disabled"}"
-          "value"               = "true"
-          "propagate_at_launch" = false
+          value = "true"
+          propagate_at_launch = false
         },
         {
-          "key" = "k8s.io/cluster-autoscaler/node-template/label/beta.kubernetes.io/instance-type"
-          "value" = lookup(
+          key = "k8s.io/cluster-autoscaler/node-template/label/beta.kubernetes.io/instance-type"
+          value = lookup(
             var.worker_groups[count.index],
             "instance_type",
             local.workers_group_defaults["instance_type"],
           )
-          "propagate_at_launch" = false
+          propagate_at_launch = false
         },
       ],
       local.asg_tags,
       slice(
         null_resource.all_node_labels.*.triggers,
-        element(
-          split(",", data.external.parse_node_labels.result["start_idxs"]),
-          count.index,
-        ),
-        element(
-          split(",", data.external.parse_node_labels.result["end_idxs"]),
-          count.index,
-        ),
+        split(",", data.external.parse_node_labels.result["start_idxs"])[count.index],
+        split(",", data.external.parse_node_labels.result["end_idxs"])[count.index],
       ),
       slice(
         null_resource.all_node_taints.*.triggers,
-        element(
-          split(",", data.external.parse_node_taints.result["start_idxs"]),
-          count.index,
-        ),
-        element(
-          split(",", data.external.parse_node_taints.result["end_idxs"]),
-          count.index,
-        ),
+        split(",", data.external.parse_node_taints.result["start_idxs"])[count.index],
+        split(",", data.external.parse_node_taints.result["end_idxs"])[count.index],
       ),
-    ),
-  ]
+    )
 
   lifecycle {
     ignore_changes = [desired_capacity]
@@ -177,7 +149,7 @@ resource "aws_launch_configuration" "workers" {
       ),
     ),
   )]
-  iam_instance_profile = element(aws_iam_instance_profile.workers.*.id, count.index)
+  iam_instance_profile = aws_iam_instance_profile.workers.*.id[count.index]
   image_id = lookup(
     var.worker_groups[count.index],
     "ami_id",
@@ -193,7 +165,7 @@ resource "aws_launch_configuration" "workers" {
     "key_name",
     local.workers_group_defaults["key_name"],
   )
-  user_data_base64 = base64encode(element(data.template_file.userdata.*.rendered, count.index))
+  user_data_base64 = base64encode(data.template_file.userdata.*.rendered[count.index])
   ebs_optimized = lookup(
     var.worker_groups[count.index],
     "ebs_optimized",
@@ -340,8 +312,8 @@ resource "null_resource" "tags_as_list_of_maps" {
   count = length(keys(var.tags))
 
   triggers = {
-    key                 = element(keys(var.tags), count.index)
-    value               = element(values(var.tags), count.index)
+    key                 = keys(var.tags)[count.index]
+    value               = values(var.tags)[count.index]
     propagate_at_launch = "true"
   }
 }

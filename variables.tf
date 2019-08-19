@@ -62,11 +62,11 @@ variable "vpc_id" {
 
 variable "worker_groups" {
   description = "A list of maps defining worker group configurations. See workers_group_defaults for valid keys."
-  type        = list(string)
+  type        = list(map(string))
 
   default = [
     {
-      "name" = "default"
+      name = "default"
     },
   ]
 }
