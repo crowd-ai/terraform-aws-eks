@@ -70,11 +70,8 @@ EOF
 }
 
 data "template_file" "userdata" {
-  count = "${var.worker_group_count}"
-
-  template = "${lookup(var.worker_groups[count.index], "use_default_userdata", true)
-    ? file("${path.module}/templates/userdata.sh.tpl")
-    : file("${path.module}/templates/empty-userdata.sh.tpl")}"
+  template = "${file("${path.module}/templates/userdata.sh.tpl")}"
+  count    = "${var.worker_group_count}"
 
   vars {
     cluster_name        = "${aws_eks_cluster.this.name}"

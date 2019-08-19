@@ -27,8 +27,6 @@ resource "null_resource" "all_node_taints" {
 }
 
 resource "aws_autoscaling_group" "workers" {
-  count                 = "${var.worker_group_count}"
-
   name_prefix           = "${aws_eks_cluster.this.name}-${lookup(var.worker_groups[count.index], "name", count.index)}"
   desired_capacity      = "${lookup(var.worker_groups[count.index], "asg_desired_capacity", local.workers_group_defaults["asg_desired_capacity"])}"
   max_size              = "${lookup(var.worker_groups[count.index], "asg_max_size", local.workers_group_defaults["asg_max_size"])}"
@@ -38,6 +36,7 @@ resource "aws_autoscaling_group" "workers" {
   vpc_zone_identifier   = ["${split(",", coalesce(lookup(var.worker_groups[count.index], "subnets", ""), local.workers_group_defaults["subnets"]))}"]
   protect_from_scale_in = "${lookup(var.worker_groups[count.index], "protect_from_scale_in", local.workers_group_defaults["protect_from_scale_in"])}"
   suspended_processes   = ["${compact(split(",", coalesce(lookup(var.worker_groups[count.index], "suspended_processes", ""), local.workers_group_defaults["suspended_processes"])))}"]
+  count                 = "${var.worker_group_count}"
 
   tags = ["${concat(
     list(
