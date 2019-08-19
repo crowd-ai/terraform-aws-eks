@@ -1,4 +1,5 @@
-data "aws_region" "current" {}
+data "aws_region" "current" {
+}
 
 data "aws_iam_policy_document" "workers_assume_role_policy" {
   statement {
@@ -41,17 +42,29 @@ data "aws_iam_policy_document" "cluster_assume_role_policy" {
 }
 
 data "template_file" "kubeconfig" {
-  template = "${file("${path.module}/templates/kubeconfig.tpl")}"
+  template = file("${path.module}/templates/kubeconfig.tpl")
 
-  vars {
-    kubeconfig_name                   = "${local.kubeconfig_name}"
-    endpoint                          = "${aws_eks_cluster.this.endpoint}"
-    region                            = "${data.aws_region.current.name}"
-    cluster_auth_base64               = "${aws_eks_cluster.this.certificate_authority.0.data}"
-    aws_authenticator_command         = "${var.kubeconfig_aws_authenticator_command}"
-    aws_authenticator_command_args    = "${length(var.kubeconfig_aws_authenticator_command_args) > 0 ? "        - ${join("\n        - ", var.kubeconfig_aws_authenticator_command_args)}" : "        - ${join("\n        - ", formatlist("\"%s\"", list("token", "-i", aws_eks_cluster.this.name)))}"}"
-    aws_authenticator_additional_args = "${length(var.kubeconfig_aws_authenticator_additional_args) > 0 ? "        - ${join("\n        - ", var.kubeconfig_aws_authenticator_additional_args)}" : ""}"
-    aws_authenticator_env_variables   = "${length(var.kubeconfig_aws_authenticator_env_variables) > 0 ? "      env:\n${join("\n", data.template_file.aws_authenticator_env_variables.*.rendered)}" : ""}"
+  vars = {
+    kubeconfig_name           = local.kubeconfig_name
+    endpoint                  = aws_eks_cluster.this.endpoint
+    region                    = data.aws_region.current.name
+    cluster_auth_base64       = aws_eks_cluster.this.certificate_authority[0].data
+    aws_authenticator_command = var.kubeconfig_aws_authenticator_command
+    aws_authenticator_command_args = length(var.kubeconfig_aws_authenticator_command_args) > 0 ? "        - ${join(
+      "\n        - ",
+      var.kubeconfig_aws_authenticator_command_args,
+      )}" : "        - ${join(
+      "\n        - ",
+      formatlist("\"%s\"", ["token", "-i", aws_eks_cluster.this.name]),
+    )}"
+    aws_authenticator_additional_args = length(var.kubeconfig_aws_authenticator_additional_args) > 0 ? "        - ${join(
+      "\n        - ",
+      var.kubeconfig_aws_authenticator_additional_args,
+    )}" : ""
+    aws_authenticator_env_variables = length(var.kubeconfig_aws_authenticator_env_variables) > 0 ? "      env:\n${join(
+      "\n",
+      data.template_file.aws_authenticator_env_variables.*.rendered,
+    )}" : ""
   }
 }
 
@@ -61,31 +74,52 @@ data "template_file" "aws_authenticator_env_variables" {
           value: $${value}
 EOF
 
-  count = "${length(var.kubeconfig_aws_authenticator_env_variables)}"
 
-  vars {
-    value = "${element(values(var.kubeconfig_aws_authenticator_env_variables), count.index)}"
-    key   = "${element(keys(var.kubeconfig_aws_authenticator_env_variables), count.index)}"
+  count = length(var.kubeconfig_aws_authenticator_env_variables)
+
+  vars = {
+    value = element(
+      values(var.kubeconfig_aws_authenticator_env_variables),
+      count.index,
+    )
+    key = element(
+      keys(var.kubeconfig_aws_authenticator_env_variables),
+      count.index,
+    )
   }
 }
 
 data "template_file" "userdata" {
-  count = "${var.worker_group_count}"
+  count = var.worker_group_count
 
-  template = "${lookup(var.worker_groups[count.index], "use_default_userdata", true)
-    ? file("${path.module}/templates/userdata.sh.tpl")
-    : file("${path.module}/templates/empty-userdata.sh.tpl")}"
+  template = lookup(var.worker_groups[count.index], "use_default_userdata", true) ? file("${path.module}/templates/userdata.sh.tpl") : file("${path.module}/templates/empty-userdata.sh.tpl")
 
-  vars {
-    cluster_name        = "${aws_eks_cluster.this.name}"
-    endpoint            = "${aws_eks_cluster.this.endpoint}"
-    cluster_auth_base64 = "${aws_eks_cluster.this.certificate_authority.0.data}"
-    pre_userdata        = "${lookup(var.worker_groups[count.index], "pre_userdata", local.workers_group_defaults["pre_userdata"])}"
-    additional_userdata = "${lookup(var.worker_groups[count.index], "additional_userdata", local.workers_group_defaults["additional_userdata"])}"
-    kubelet_extra_args  = "${join(" ", list(
-      "--node-labels=${lookup(var.worker_groups[count.index], "node_labels", "")}",
-      "--register-with-taints=${lookup(var.worker_groups[count.index], "node_taints", "")}",
-      "${lookup(var.worker_groups[count.index], "kubelet_extra_args", local.workers_group_defaults["kubelet_extra_args"])}"
-    ))}"
+  vars = {
+    cluster_name        = aws_eks_cluster.this.name
+    endpoint            = aws_eks_cluster.this.endpoint
+    cluster_auth_base64 = aws_eks_cluster.this.certificate_authority[0].data
+    pre_userdata = lookup(
+      var.worker_groups[count.index],
+      "pre_userdata",
+      local.workers_group_defaults["pre_userdata"],
+    )
+    additional_userdata = lookup(
+      var.worker_groups[count.index],
+      "additional_userdata",
+      local.workers_group_defaults["additional_userdata"],
+    )
+    kubelet_extra_args = join(
+      " ",
+      [
+        "--node-labels=${lookup(var.worker_groups[count.index], "node_labels", "")}",
+        "--register-with-taints=${lookup(var.worker_groups[count.index], "node_taints", "")}",
+        lookup(
+          var.worker_groups[count.index],
+          "kubelet_extra_args",
+          local.workers_group_defaults["kubelet_extra_args"],
+        ),
+      ],
+    )
   }
 }
+
